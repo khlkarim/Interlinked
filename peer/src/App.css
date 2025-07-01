@@ -1,0 +1,35 @@
+.app
+{
+  width: 250px;
+  height: 200px;
+}
+
+.flex
+{
+  display: flex;
+  gap: 5px;
+}
+
+.box 
+{
+  color: white;
+  background-color: black;
+  border: 1px solid white;
+  padding: 5px 10px;
+}
+
+button.box
+{
+  flex: 1;
+}
+
+select.box
+{
+  flex: 2;
+}
+
+button.box:hover
+{
+  color: black;
+  background-color: white;
+}

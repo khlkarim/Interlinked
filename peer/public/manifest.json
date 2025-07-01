@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+
+    "version": "1.0.0",
+    "name": "DOSO",
+    "description": "Peer to peer communication",
+
+    "action": {
+        "default_popup": "./index.html"
+    }
+}
