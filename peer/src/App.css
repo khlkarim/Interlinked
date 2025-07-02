@@ -1,6 +1,6 @@
 .app
 {
-  width: 250px;
+  width: 300px;
   height: 200px;
 }
 
@@ -32,4 +32,9 @@ button.box:hover
 {
   color: black;
   background-color: white;
+}
+
+input.box
+{
+  text-align: center;
 }

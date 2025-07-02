@@ -18,8 +18,9 @@ function Select({ id, name, options }: SelectProps)
             className="box"
             name={name} 
             id={id}
+            defaultValue={'0'}
         >
-            <option value="" disabled selected>Select Plugin</option>
+            <option value='0' disabled>Select Plugin</option>
             {options.map((option, index) => {
                 return <option key={index} value={option.value}>{option.name}</option>
             })}
