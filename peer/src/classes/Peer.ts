@@ -38,21 +38,11 @@ export class Peer {
         this.registrationCallbacks.push(callback);
     }
 
-    stream(): void {
+    stream(plugin: string): void {
         log('Enabling stream mode');
-        this.signaling.on('offer', this.handleOffer.bind(this));
-    }
-
-    private handleOffer(msg: SDPMessage): void {
-        if(!this.uuid) {
-            throw new Error('Peer is not registered');
-        }
-
-        log('Offer received for streaming:', msg);
-        const pc = new PeerConnection(this.uuid, msg.source);
-        pc.handleOffer(msg);
-        this.children.push(pc);
-        log('Child PeerConnection added. Total children:', this.children.length);
+        this.signaling.on('offer', (msg: SDPMessage) => {
+            this.handleOffer(msg, plugin);
+        });
     }
 
     unstream(): void {
@@ -60,37 +50,26 @@ export class Peer {
         this.signaling.off('offer');
     }
 
-    listen(uuid: string): void {
+    listen(uuid: string, plugin: string): void {
         if(!this.uuid) {
             throw new Error('Peer is not registered');
         }
-
         log('Listening to UUID:', uuid);
-        this.parent = new PeerConnection(this.uuid, uuid);
+        this.parent = new PeerConnection(this.uuid, uuid, plugin);
         this.signaling.on('answer', this.parent.handleAnswer.bind(this.parent));
         this.parent.createDataChannel();
     }
 
-    send(uuid: string, message: string): void {
-        for (const child of this.children) {
-            if (child.destination === uuid) {
-                log("sending :", message, " to ", uuid);
-                child.send(message);
-                return;
-            }
+    private handleOffer(msg: SDPMessage, plugin: string): void {
+        if(!this.uuid) {
+            throw new Error('Peer is not registered');
         }
 
-        if (this.parent && this.parent.destination === uuid) {
-            log("sending :", message, " to ", uuid);
-            this.parent.send(message);
-        }
-    }
-
-    broadcast(message: string): void {
-        for (const child of this.children) {
-            log("sending :", message, " to ", child.destination);
-            child.send(message);
-        }
+        log('Offer received for streaming:', msg);
+        const pc = new PeerConnection(this.uuid, msg.source, plugin);
+        pc.handleOffer(msg);
+        this.children.push(pc);
+        log('Child PeerConnection added. Total children:', this.children.length);
     }
 
     private registerICECandidateHandler(): void {

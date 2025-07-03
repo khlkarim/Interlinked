@@ -1,6 +1,7 @@
 import { iceServers } from "../constants/ICE";
 import type { SDPMessage } from "../interfaces/SDPMessage";
 import { log } from "../utils/logger";
+import { PluginManager } from "./plugins/PluginManager";
 import { Signaling } from "./Signaling";
 
 export class PeerConnection {
@@ -8,14 +9,16 @@ export class PeerConnection {
 
     readonly source: string;
     readonly destination: string;
+    readonly plugin: string;
     private readonly pc: RTCPeerConnection;
     private channel?: RTCDataChannel;
 
-    constructor(source: string, destination: string) {
+    constructor(source: string, destination: string, plugin: string) {
         this.signaling = new Signaling();
         
         this.source = source;
         this.destination = destination;
+        this.plugin = plugin;
 
         this.pc = new RTCPeerConnection({ iceServers });
         this.setCallbacks();
@@ -110,6 +113,8 @@ export class PeerConnection {
         }
         try {
             this.channel = this.pc.createDataChannel(label, options);
+            const plugin = PluginManager.bindPluginByName(this.plugin, this.channel);
+            plugin?.bindReceivers();
             this.setupDataChannel();
             log('Data channel created by initiator.');
         } catch (e) {
@@ -119,13 +124,14 @@ export class PeerConnection {
 
     private handleDataChannelCreation(event: RTCDataChannelEvent): void {
         this.channel = event.channel;
+        const plugin = PluginManager.bindPluginByName(this.plugin, this.channel);
+        plugin?.bindEmitters();
         this.setupDataChannel();
         log('Data channel received and set up:', event);
     }
 
     private setupDataChannel(): void {
         if (!this.channel) return;
-        this.channel.onmessage = this.handleReceiveMessage.bind(this);
         this.channel.onopen = this.handleDataChannelStatusChange.bind(this);
         this.channel.onclose = this.handleDataChannelStatusChange.bind(this);
         this.channel.onerror = (e: Event) => log('Data channel error:', e);
@@ -133,20 +139,8 @@ export class PeerConnection {
 
     private handleDataChannelStatusChange(event: Event): void {
         const channel = event.target as RTCDataChannel | null;
-        if (channel && channel.readyState)
+        if (channel && channel.readyState) {
             log('Channel status:', channel.readyState);
-    }
-
-    private handleReceiveMessage(event: MessageEvent<string>): void {
-        log('Received message:', event.data);
-    }
-
-    public send(message: string): void {
-        if (this.channel && this.channel.readyState === "open") {
-            this.channel.send(message);
-            log("sending:", message);
-        } else {
-            log("Data channel is not open. Cannot send message.");
         }
     }
 

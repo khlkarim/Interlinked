@@ -1,3 +1,5 @@
+import type { ChangeEventHandler } from "react";
+
 interface Option
 {
     value: string;
@@ -8,17 +10,20 @@ interface SelectProps
 {
     id: string;
     name: string;
-    options: Option[]
+    value: string;
+    options: Option[];
+    handleChange: ChangeEventHandler<HTMLSelectElement>;
 }
 
-function Select({ id, name, options }: SelectProps)
+function Select({ id, name, value, options, handleChange }: SelectProps)
 {
     return (
         <select 
             className="box"
             name={name} 
             id={id}
-            defaultValue={'0'}
+            value={value}
+            onChange={handleChange}
         >
             <option value='0' disabled>Select Plugin</option>
             {options.map((option, index) => {
