@@ -3,12 +3,10 @@ import Button from "./form/Button";
 import Select from "./form/Select";
 import { PLUGINS_LIST } from "../constants/PluginList";
 import { useState, type ChangeEvent } from "react";
-import usePeer from "../hooks/usePeer";
+import { Manager } from "../classes/Manager";
 
 function Listen()
 {
-    const peer = usePeer();
-
     const [uuid, setUUID] = useState('');
     const [plugin, setPlugin] = useState('0');
 
@@ -18,7 +16,14 @@ function Listen()
 
     function handleListen() {
         if(plugin === '0' || uuid === '') return;
-        peer.listen(uuid, plugin);
+        if(plugin === 'youtube') {
+            Manager.injectListener(
+                {
+                    url: '*://www.youtube.com/*',
+                    name: 'plugins/youtube/listener-Y3LLUoFb.js'
+                }
+            , uuid);
+        }
     }
 
     function handlePlugin(event: ChangeEvent<HTMLSelectElement>) {

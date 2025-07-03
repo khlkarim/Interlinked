@@ -10,7 +10,7 @@ import { MessageDto } from './dto/message.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:5173',
+    origin: /^https?:\/\/(www\.)?youtube\.com(:\d+)?(\/.*)?$/i,
   },
 })
 export class SignalingGateway {

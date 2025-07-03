@@ -2,20 +2,25 @@ import Input from "./form/Input";
 import Button from "./form/Button";
 import Select from "./form/Select";
 import { PLUGINS_LIST } from "../constants/PluginList";
-import usePeer from "../hooks/usePeer";
 import { useState, type ChangeEvent } from "react";
+import { Manager } from "../classes/Manager";
 
 function Stream() {
-    const peer = usePeer();
-
     const [uuid, setUUID] = useState('');
     const [plugin, setPlugin] = useState('0');
 
-    peer.onRegistration(setUUID);
-
     function handleStream() {
         if(plugin === '0') return;
-        peer.stream(plugin);
+        if(plugin === 'youtube') {
+            Manager.injectStreamer(
+                {
+                    url: '*://www.youtube.com/*',
+                    name: 'plugins/youtube/streamer-DviSBHVA.js'
+                }
+            , (uuid) => {
+                setUUID(uuid);
+            });
+        }
     }
 
     function handlePlugin(event: ChangeEvent<HTMLSelectElement>) {

@@ -2,11 +2,9 @@ import Stream from './components/Stream'
 import Listen from './components/Listen'
 
 import './App.css'
-import PeerProvider from './providers/PeerProvider'
 
 function App() {
   return (
-    <PeerProvider>
       <div 
         className='app box flex' 
         style={{ 
@@ -18,7 +16,6 @@ function App() {
         <Stream />
         <Listen />
       </div>
-    </PeerProvider>
   )
 }
 

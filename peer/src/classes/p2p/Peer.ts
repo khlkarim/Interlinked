@@ -1,5 +1,7 @@
-import type { SDPMessage } from "../interfaces/SDPMessage";
-import { log } from "../utils/logger";
+import type { Listener } from "../../interfaces/Listener";
+import type { Message } from "../../interfaces/Message";
+import type { SDPMessage } from "../../interfaces/SDPMessage";
+import { log } from "../../utils/logger";
 import { PeerConnection } from "./PeerConnection";
 import { Signaling } from "./Signaling";
 
@@ -10,8 +12,7 @@ export class Peer {
     private parent?: PeerConnection;
     private children: PeerConnection[] = [];
 
-    private static instance: Peer | undefined;
-    private registrationCallbacks: Array<(uuid: string) => void> = [];
+    private listeners: Array<Listener> = [];
 
     constructor() {
         this.signaling = new Signaling();
@@ -20,54 +21,56 @@ export class Peer {
         this.registerICECandidateHandler();
     }
 
-    static getInstance() {
-        if(this.instance) return this.instance;
-        this.instance = new Peer();
-        return this.instance;
-    }
-
     private setUUID(uuid: string): void {
         this.uuid = uuid;
         log('Assigned local UUID:', this.uuid);
 
-        this.registrationCallbacks.forEach((callback) => {
-            callback(uuid);
+        this.listeners.forEach((listener) => {
+            listener.callback(uuid);
         });
     }
-    onRegistration(callback: (uuid: string) => void) {
-        this.registrationCallbacks.push(callback);
+
+    on(event: string, callback: (data: unknown) => void) {
+        if(event === 'registered') {
+            this.listeners.push({ event, callback });
+        }
+        if(this.parent) {
+            this.parent.on(event, callback);
+        }
     }
 
-    stream(plugin: string): void {
+    broadcast(message: Message) {
+        this.children.forEach((child) => {
+            child.send(message);
+        });
+    }
+
+    stream(): void {
         log('Enabling stream mode');
-        this.signaling.on('offer', (msg: SDPMessage) => {
-            this.handleOffer(msg, plugin);
-        });
+        this.signaling.on('offer', this.handleOffer.bind(this));
     }
 
-    unstream(): void {
-        log('Disabling stream mode');
-        this.signaling.off('offer');
-    }
-
-    listen(uuid: string, plugin: string): void {
+    listen(uuid: string): void {
         if(!this.uuid) {
             throw new Error('Peer is not registered');
         }
         log('Listening to UUID:', uuid);
-        this.parent = new PeerConnection(this.uuid, uuid, plugin);
-        this.signaling.on('answer', this.parent.handleAnswer.bind(this.parent));
+     
+        this.parent = new PeerConnection(this.uuid, uuid);
         this.parent.createDataChannel();
+     
+        this.signaling.on('answer', this.parent.handleAnswer.bind(this.parent));
     }
 
-    private handleOffer(msg: SDPMessage, plugin: string): void {
+    private handleOffer(msg: SDPMessage): void {
         if(!this.uuid) {
             throw new Error('Peer is not registered');
         }
-
         log('Offer received for streaming:', msg);
-        const pc = new PeerConnection(this.uuid, msg.source, plugin);
+        
+        const pc = new PeerConnection(this.uuid, msg.source);
         pc.handleOffer(msg);
+        
         this.children.push(pc);
         log('Child PeerConnection added. Total children:', this.children.length);
     }

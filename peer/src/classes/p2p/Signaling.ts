@@ -1,6 +1,6 @@
 import { io, type Socket } from "socket.io-client";
-import type { SDPMessage } from "../interfaces/SDPMessage";
-import { log } from "../utils/logger";
+import type { SDPMessage } from "../../interfaces/SDPMessage";
+import { log } from "../../utils/logger";
 
 export class Signaling {
     static BASE_URL = 'ws://localhost:3000';
