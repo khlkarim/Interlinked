@@ -1,8 +1,10 @@
-export const PLUGINS_LIST = [
+import type { Plugin } from "../interfaces/Plugin";
+
+export const PLUGINS_LIST: Plugin[] = [
     {
-        value: "youtube",
-        name: "Youtube Plugin",
-        streamerUrl: 'plugins/youtube/streamer-DviSBHVA.js',
-        listenerUrl: 'plugins/youtube/listener-Y3LLUoFb.js'
+        name: "Youtube",
+        targetUrl: "*://www.youtube.com/*",
+        streamerPath: 'plugins/youtube/streamer.js',
+        listenerPath: 'plugins/youtube/listener.js'
     }
 ]

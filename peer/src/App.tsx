@@ -5,14 +5,7 @@ import './App.css'
 
 function App() {
   return (
-      <div 
-        className='app box flex' 
-        style={{ 
-          flexDirection: 'column', 
-          justifyContent: 'space-around', 
-          alignItems: 'stretch' 
-        }}
-      >
+      <div className='app box flex column'>
         <Stream />
         <Listen />
       </div>

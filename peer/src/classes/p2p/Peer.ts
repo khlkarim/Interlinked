@@ -9,10 +9,10 @@ export class Peer {
     private signaling: Signaling;
 
     uuid?: string;
-    private parent?: PeerConnection;
+    parent?: PeerConnection;
     private children: PeerConnection[] = [];
 
-    private listeners: Array<Listener> = [];
+    listeners: Array<Listener> = [];
 
     constructor() {
         this.signaling = new Signaling();

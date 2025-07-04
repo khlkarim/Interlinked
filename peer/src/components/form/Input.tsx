@@ -7,13 +7,13 @@ interface InputProps
     value: string;
     readOnly: boolean;
     placeholder: string;
-    handleInput: (uuid: string) => void;
+    inputCallback: (uuid: string) => void;
 }
 
-function Input({ type, name, value, readOnly, placeholder, handleInput }: InputProps)
+function Input({ type, name, value, readOnly, placeholder, inputCallback }: InputProps)
 {
     function handleChange(e: ChangeEvent<HTMLInputElement>) {
-        handleInput(e.target.value);
+        inputCallback(e.target.value);
     }
 
     return (

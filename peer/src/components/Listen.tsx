@@ -2,60 +2,54 @@ import Input from "./form/Input";
 import Button from "./form/Button";
 import Select from "./form/Select";
 import { PLUGINS_LIST } from "../constants/PluginList";
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { Manager } from "../classes/Manager";
+import { log } from "../utils/logger";
+import type { Plugin } from "../interfaces/Plugin";
 
-function Listen()
-{
+function Listen() {
     const [uuid, setUUID] = useState('');
-    const [plugin, setPlugin] = useState('0');
+    const [plugin, setPlugin] = useState<Plugin | null>(null);
+
+    function handleListen() {
+        if(!plugin) {
+            log('Select a plugin');
+            return;
+        }
+
+        Manager.inject(plugin, 'listener', undefined, uuid);
+    }
+
+    function handlePlugin(plugin: Plugin | null) {
+        setPlugin(plugin);
+    }
 
     function handleInput(uuid: string) {
         setUUID(uuid);
     }
 
-    function handleListen() {
-        if(plugin === '0' || uuid === '') return;
-        if(plugin === 'youtube') {
-            Manager.injectListener(
-                {
-                    url: '*://www.youtube.com/*',
-                    name: 'plugins/youtube/listener-Y3LLUoFb.js'
-                }
-            , uuid);
-        }
-    }
-
-    function handlePlugin(event: ChangeEvent<HTMLSelectElement>) {
-        setPlugin(event.target.value);
-    }
-
     return (
-        <div 
-            className="listen flex"
-            style={{ 
-                flexDirection: 'column', 
-                alignItems: 'stretch' 
-            }}
-        >
+        <div className="flex column">
             <Input 
                 type="text" 
-                name="listen-from" 
+                name="listener-from" 
                 value={uuid}
                 placeholder="Enter a streamer's code here" 
-                handleInput={handleInput} 
+                inputCallback={handleInput} 
                 readOnly={false}
             />
+
             <div className="flex">
                 <Select 
-                    id="listen-select" 
-                    name="listen-select" 
-                    value={plugin}
-                    options={PLUGINS_LIST} 
-                    handleChange={handlePlugin}
+                    id="listener-select" 
+                    name="listener-select" 
+                    value={plugin} 
+                    plugins={PLUGINS_LIST} 
+                    changeCallback={handlePlugin} 
                 />
                 <Button name="Listen" handleClick={handleListen} />
             </div>
+
         </div>
     );
 }

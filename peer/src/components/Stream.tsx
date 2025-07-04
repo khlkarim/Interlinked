@@ -2,45 +2,36 @@ import Input from "./form/Input";
 import Button from "./form/Button";
 import Select from "./form/Select";
 import { PLUGINS_LIST } from "../constants/PluginList";
-import { useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import { Manager } from "../classes/Manager";
+import { log } from "../utils/logger";
+import type { Plugin } from "../interfaces/Plugin";
 
 function Stream() {
     const [uuid, setUUID] = useState('');
-    const [plugin, setPlugin] = useState('0');
+    const [plugin, setPlugin] = useState<Plugin | null>(null);
 
     function handleStream() {
-        if(plugin === '0') return;
-        if(plugin === 'youtube') {
-            Manager.injectStreamer(
-                {
-                    url: '*://www.youtube.com/*',
-                    name: 'plugins/youtube/streamer-DviSBHVA.js'
-                }
-            , (uuid) => {
-                setUUID(uuid);
-            });
+        if(!plugin) {
+            log('Select a plugin');
+            return;
         }
+
+        Manager.inject(plugin, 'streamer', (uuid) => { setUUID(uuid) });
     }
 
-    function handlePlugin(event: ChangeEvent<HTMLSelectElement>) {
-        setPlugin(event.target.value);
+    function handlePlugin(plugin: Plugin | null) {
+        setPlugin(plugin);
     }
 
     return (
-        <div 
-            className="stream flex"
-            style={{ 
-                flexDirection: 'column', 
-                alignItems: 'stretch' 
-            }}
-        >
+        <div className="flex column">
             <Input 
                 type="text" 
                 name="stream-from" 
                 value={uuid}
                 placeholder="Your streamer code will appear here" 
-                handleInput={() => {}} 
+                inputCallback={() => {}} 
                 readOnly={true}
             />
 
@@ -49,8 +40,8 @@ function Stream() {
                     id="stream-select" 
                     name="stream-select" 
                     value={plugin} 
-                    options={PLUGINS_LIST} 
-                    handleChange={handlePlugin} 
+                    plugins={PLUGINS_LIST} 
+                    changeCallback={handlePlugin} 
                 />
                 <Button name="Stream" handleClick={handleStream} />
             </div>

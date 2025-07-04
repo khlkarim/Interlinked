@@ -13,7 +13,7 @@ export class PeerConnection {
     private readonly pc: RTCPeerConnection;
     private channel?: RTCDataChannel;
 
-    private listeners: Array<Listener> = [];
+    listeners: Array<Listener> = [];
 
     constructor(source: string, destination: string) {
         this.signaling = new Signaling();
@@ -139,11 +139,14 @@ export class PeerConnection {
         this.channel.onerror = (e: Event) => log('Data channel error:', e);
     }
 
-    private handleMessage(event: MessageEvent<Message>) {
+    private handleMessage(event: MessageEvent<string>) {
+        log('RECEIVED MESSAGE:', event);
         if(event.data) {
-            const message = event.data;
+            const message = JSON.parse(event.data);
+            log('PARSED MESSAGE:', message);
             
             this.listeners.forEach((listener) => {
+                log('EVENT:', listener.event);
                 if(listener.event === message.type) {
                     listener.callback(message);
                 }

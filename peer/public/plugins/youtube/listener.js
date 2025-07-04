@@ -3446,9 +3446,12 @@ class PeerConnection {
     this.channel.onerror = (e) => log("Data channel error:", e);
   }
   handleMessage(event) {
+    log("RECEIVED MESSAGE:", event);
     if (event.data) {
-      const message = event.data;
+      const message = JSON.parse(event.data);
+      log("PARSED MESSAGE:", message);
       this.listeners.forEach((listener) => {
+        log("EVENT:", listener.event);
         if (listener.event === message.type) {
           listener.callback(message);
         }
@@ -3552,20 +3555,24 @@ class Peer {
   }
 }
 const peer = new Peer();
-peer.stream();
-peer.on("registered", (uuid) => {
-  chrome.runtime.sendMessage(JSON.stringify({ type: "uuid", data: uuid }));
-});
-document.addEventListener("click", () => {
-  peer.broadcast({
-    type: "test",
-    data: {
-      test: "testing"
-    }
-  });
-});
-chrome.runtime.onMessage.addListener((message) => {
-  if(message.type === 'IS_INJECTED') {
-    chrome.runtime.sendMessage({ injected: true });
+chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+  if (message.type === "uuid") {
+    peer.on("registered", () => {
+      peer.listen(message.data.uuid);
+      peer.on("test", (message2) => {
+        console.log(message2);
+      });
+    });
+    log("PEER LISTENERS:", peer.listeners);
+    log("PEER CONNECTION LISTENERS:", peer.parent?.listeners);
+  }
+  if (message.type === "IS_INJECTED") {
+    log("IS INJECTED MESSAGE RECEIVED");
+    sendResponse({
+      injected: true
+    });
+  }
+  if (message.type === "KILL") {
+    log("KILL MESSAGE RECEIVED");
   }
 });

@@ -1,34 +1,36 @@
-import type { ChangeEventHandler } from "react";
+import type { ChangeEvent } from "react";
+import type { Plugin } from "../../interfaces/Plugin";
 
-interface Option
-{
-    value: string;
-    name: string;
-}
-
-interface SelectProps
-{
+interface SelectProps {
     id: string;
     name: string;
-    value: string;
-    options: Option[];
-    handleChange: ChangeEventHandler<HTMLSelectElement>;
+    value: Plugin | null;
+    plugins: Plugin[];
+    changeCallback: (plugin: Plugin | null) => void;
 }
 
-function Select({ id, name, value, options, handleChange }: SelectProps)
-{
+function Select({ id, name, value, plugins, changeCallback }: SelectProps) {
+    const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        const plugin = plugins.find(p => p.name === event.target.value) || null;
+        changeCallback(plugin);
+    };
+
     return (
-        <select 
+        <select
             className="box"
-            name={name} 
             id={id}
-            value={value}
+            name={name}
+            value={value ? value.name : ''}
             onChange={handleChange}
         >
-            <option value='0' disabled>Select Plugin</option>
-            {options.map((option, index) => {
-                return <option key={index} value={option.value}>{option.name}</option>
-            })}
+            <option value="" disabled>
+                Select Plugin
+            </option>
+            {plugins.map(plugin => (
+                <option key={plugin.name} value={plugin.name}>
+                    {plugin.name}
+                </option>
+            ))}
         </select>
     );
 }
