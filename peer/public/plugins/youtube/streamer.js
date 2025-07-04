@@ -3451,7 +3451,6 @@ class PeerConnection {
       const message = JSON.parse(event.data);
       log("PARSED MESSAGE:", message);
       this.listeners.forEach((listener) => {
-        log("EVENT:", listener.event);
         if (listener.event === message.type) {
           listener.callback(message);
         }
@@ -3465,7 +3464,7 @@ class PeerConnection {
     }
   }
   send(message) {
-    if (this.channel) {
+    if (this.channel && this.channel.readyState === "open") {
       this.channel.send(JSON.stringify(message));
     } else {
       log("Channel not ready yet");
@@ -3498,7 +3497,7 @@ class Peer {
     this.uuid = uuid;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback(uuid);
+      listener.callback({ type: "uuid", data: { uuid } });
     });
   }
   on(event, callback) {
@@ -3554,27 +3553,139 @@ class Peer {
     log("No matching PeerConnection found for ICE candidate", msg);
   }
 }
-const peer = new Peer();
-peer.stream();
-peer.on("registered", (uuid) => {
-  chrome.runtime.sendMessage({ type: "uuid", data: { uuid } });
-});
-document.addEventListener("click", () => {
-  peer.broadcast({
-    type: "test",
-    data: {
-      test: "testing"
+function addListeners() {
+  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+    if (message.type === "IS_INJECTED") {
+      log("IS INJECTED MESSAGE RECEIVED");
+      sendResponse({
+        injected: true
+      });
+    }
+    if (message.type === "KILL") {
+      log("KILL MESSAGE RECEIVED");
     }
   });
+}
+addListeners();
+const peer = new Peer();
+peer.on("registered", (message) => {
+  chrome.runtime.sendMessage(message);
 });
-chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
-  if (message.type === "IS_INJECTED") {
-    log("IS INJECTED MESSAGE RECEIVED");
-    sendResponse({
-      injected: true
+peer.stream();
+document.addEventListener("keydown", (event) => {
+  if (event.key === "T" || event.key === "t") {
+    peer.broadcast({
+      type: "test",
+      data: {
+        test: "testing"
+      }
     });
   }
-  if (message.type === "KILL") {
-    log("KILL MESSAGE RECEIVED");
+});
+let video = null;
+window.addEventListener("yt-navigate-finish", () => {
+  log("Navigation finished:", window.location.href);
+  peer.broadcast({
+    type: "goto",
+    data: {
+      href: window.location.href
+    }
+  });
+  video = document.querySelector("video");
+  if (video !== null) {
+    const videoHref = window.location.href;
+    video.addEventListener("play", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "play",
+            time: video.currentTime.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    video.addEventListener("pause", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "pause",
+            time: video.currentTime.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    video.addEventListener("seeked", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "seeked",
+            time: video.currentTime.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    video.addEventListener("volumechange", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "volumechange",
+            volume: video.volume.toString(),
+            muted: video.muted.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    video.addEventListener("ratechange", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "ratechange",
+            playbackRate: video.playbackRate.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    video.addEventListener("ended", () => {
+      if (video) {
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "ended",
+            time: video.currentTime.toString(),
+            href: videoHref
+          }
+        });
+      }
+    });
+    [
+      "fullscreenchange",
+      "webkitfullscreenchange",
+      "mozfullscreenchange",
+      "msfullscreenchange"
+    ].forEach((eventType) => {
+      document.addEventListener(eventType, () => {
+        const isFullscreen = !!document.fullscreenElement;
+        peer.broadcast({
+          type: "video",
+          data: {
+            action: "fullscreenchange",
+            fullscreen: isFullscreen.toString(),
+            href: videoHref
+          }
+        });
+      });
+    });
+  } else {
+    log("LOG THE SCRIPT IN A VIDEO PAGE");
   }
 });

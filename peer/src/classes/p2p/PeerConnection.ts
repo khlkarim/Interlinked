@@ -26,7 +26,7 @@ export class PeerConnection {
         log(`PeerConnection created: source=${source}, destination=${destination}`);
     }
 
-    on(event: string, callback: (data: unknown) => void) {
+    on(event: string, callback: (message: Message) => void) {
         this.listeners.push({ event, callback });
     }
 
@@ -146,7 +146,6 @@ export class PeerConnection {
             log('PARSED MESSAGE:', message);
             
             this.listeners.forEach((listener) => {
-                log('EVENT:', listener.event);
                 if(listener.event === message.type) {
                     listener.callback(message);
                 }
@@ -162,7 +161,7 @@ export class PeerConnection {
     }
 
     send(message: Message) {
-        if(this.channel) {
+        if (this.channel && this.channel.readyState === "open") {
             this.channel.send(JSON.stringify(message));
         } else {
             log('Channel not ready yet');

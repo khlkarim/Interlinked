@@ -4,20 +4,7 @@ import { log } from "../utils/logger";
 
 type CleanupFn = () => void;
 
-export class Manager {
-    private static async findTab(url: string): Promise<chrome.tabs.Tab | undefined> {
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true, url: [url] });
-        return tabs[0];
-    }
-
-    private static async isInjected(tabId: number, name: string): Promise<boolean> {
-        return new Promise(resolve => {
-            chrome.tabs.sendMessage(tabId, { type: "IS_INJECTED", data: name }, response => {
-                resolve(response?.injected ?? false);
-            });
-        });
-    }
-
+class Manager {
     private static async injectScript(tabId: number, file: string): Promise<void> {
         return new Promise((resolve, reject) => {
             chrome.scripting.executeScript(
@@ -37,14 +24,14 @@ export class Manager {
         chrome.tabs.sendMessage(tabId, { type: "KILL", data: name });
     }
 
-    static async inject(plugin: Plugin, type: "streamer" | "listener", uuidCallback?: (uuid: string) => void, uuid?: string): Promise<CleanupFn> {
-        const tab = await this.findTab(plugin.targetUrl);
+    static async inject(tabId: number, plugin: Plugin, type: "streamer" | "listener", uuidCallback?: (uuid: string) => void, uuid?: string): Promise<CleanupFn> {
+        const tab = { id: tabId };
         if (!tab?.id) {
             log("No matching active tab found.");
             return () => {};
         }
 
-        const alreadyInjected = await this.isInjected(tab.id, plugin.name);
+        const alreadyInjected = false;
         if (alreadyInjected) {
             log(`Script ${plugin.name} already injected.`);
         } else {
@@ -80,3 +67,42 @@ export class Manager {
         };
     }
 }
+
+
+chrome.runtime.onMessage.addListener((message: Message) => {
+    if(message.type === 'RELOAD_ME') {
+        console.log(message);
+
+        const tabId = Number(message.data.tabId);
+
+        chrome.tabs.get(tabId, (tab) => {
+            if (chrome.runtime.lastError) {
+            log(`Error getting tab: ${chrome.runtime.lastError.message}`);
+            return;
+            }
+
+            // If the tab is loading, wait for it to finish
+            if (tab.status === "loading") {
+            const onUpdated = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+                if (updatedTabId === tabId && changeInfo.status === "complete") {
+                chrome.tabs.onUpdated.removeListener(onUpdated);
+                Manager.inject(tabId, {
+                    name: message.data.name,
+                    targetUrl: message.data.targetUrl,
+                    listenerPath: message.data.listenerPath,
+                    streamerPath: message.data.streamerPath
+                }, 'listener', undefined, message.data.uuid);
+                }
+            };
+            chrome.tabs.onUpdated.addListener(onUpdated);
+            } else {
+            Manager.inject(tabId, {
+                name: message.data.name,
+                targetUrl: message.data.targetUrl,
+                listenerPath: message.data.listenerPath,
+                streamerPath: message.data.streamerPath
+            }, 'listener', undefined, message.data.uuid);
+            }
+        });
+    }
+});

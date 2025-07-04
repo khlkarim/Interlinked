@@ -3451,7 +3451,6 @@ class PeerConnection {
       const message = JSON.parse(event.data);
       log("PARSED MESSAGE:", message);
       this.listeners.forEach((listener) => {
-        log("EVENT:", listener.event);
         if (listener.event === message.type) {
           listener.callback(message);
         }
@@ -3465,7 +3464,7 @@ class PeerConnection {
     }
   }
   send(message) {
-    if (this.channel) {
+    if (this.channel && this.channel.readyState === "open") {
       this.channel.send(JSON.stringify(message));
     } else {
       log("Channel not ready yet");
@@ -3494,11 +3493,11 @@ class Peer {
     this.signaling.register(this.setUUID.bind(this));
     this.registerICECandidateHandler();
   }
-  setUUID(uuid) {
-    this.uuid = uuid;
+  setUUID(uuid2) {
+    this.uuid = uuid2;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback(uuid);
+      listener.callback({ type: "uuid", data: { uuid: uuid2 } });
     });
   }
   on(event, callback) {
@@ -3518,12 +3517,12 @@ class Peer {
     log("Enabling stream mode");
     this.signaling.on("offer", this.handleOffer.bind(this));
   }
-  listen(uuid) {
+  listen(uuid2) {
     if (!this.uuid) {
       throw new Error("Peer is not registered");
     }
-    log("Listening to UUID:", uuid);
-    this.parent = new PeerConnection(this.uuid, uuid);
+    log("Listening to UUID:", uuid2);
+    this.parent = new PeerConnection(this.uuid, uuid2);
     this.parent.createDataChannel();
     this.signaling.on("answer", this.parent.handleAnswer.bind(this.parent));
   }
@@ -3554,25 +3553,118 @@ class Peer {
     log("No matching PeerConnection found for ICE candidate", msg);
   }
 }
+function addListeners() {
+  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+    if (message.type === "IS_INJECTED") {
+      log("IS INJECTED MESSAGE RECEIVED");
+      sendResponse({
+        injected: true
+      });
+    }
+    if (message.type === "KILL") {
+      log("KILL MESSAGE RECEIVED");
+    }
+  });
+}
+let uuid;
+let tabId;
+addListeners();
 const peer = new Peer();
-chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "uuid") {
+    uuid = message.data.uuid;
     peer.on("registered", () => {
       peer.listen(message.data.uuid);
-      peer.on("test", (message2) => {
-        console.log(message2);
-      });
-    });
-    log("PEER LISTENERS:", peer.listeners);
-    log("PEER CONNECTION LISTENERS:", peer.parent?.listeners);
-  }
-  if (message.type === "IS_INJECTED") {
-    log("IS INJECTED MESSAGE RECEIVED");
-    sendResponse({
-      injected: true
+      setHandlers();
     });
   }
-  if (message.type === "KILL") {
-    log("KILL MESSAGE RECEIVED");
+  if (message.type === "tabId" && message.data.tabId) {
+    tabId = parseInt(message.data.tabId);
+    log("RECEIVED TABID:", tabId);
   }
 });
+function setHandlers() {
+  peer.on("test", (message) => {
+    log(message);
+  });
+  peer.on("goto", (message) => {
+    if (message.data.href && tabId) {
+      window.location.href = message.data.href;
+      chrome.runtime.sendMessage({
+        type: "RELOAD_ME",
+        data: {
+          tabId,
+          name: "Youtube",
+          targetUrl: "*://www.youtube.com/*",
+          streamerPath: "plugins/youtube/streamer.js",
+          listenerPath: "plugins/youtube/listener.js",
+          uuid
+        }
+      });
+    }
+  });
+  peer.on("video", (message) => {
+    const video = document.querySelector("video");
+    if (video) {
+      const currentHref = window.location.href;
+      const { action, time, volume, muted, playbackRate, fullscreen, href } = message.data;
+      if (tabId && href && href !== currentHref) {
+        window.location.href = message.data.href;
+        chrome.runtime.sendMessage({
+          type: "RELOAD_ME",
+          data: {
+            tabId,
+            name: "Youtube",
+            targetUrl: "*://www.youtube.com/*",
+            streamerPath: "plugins/youtube/streamer.js",
+            listenerPath: "plugins/youtube/listener.js",
+            uuid
+          }
+        });
+      }
+      switch (action) {
+        case "play":
+          if (video.paused) video.play();
+          if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
+            video.currentTime = parseFloat(time);
+          }
+          break;
+        case "pause":
+          if (!video.paused) video.pause();
+          if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
+            video.currentTime = parseFloat(time);
+          }
+          break;
+        case "seeked":
+          if (time !== void 0) {
+            video.currentTime = parseFloat(time);
+          }
+          break;
+        case "volumechange":
+          if (volume !== void 0) video.volume = parseFloat(volume);
+          if (muted !== void 0) video.muted = muted === "true";
+          break;
+        case "ratechange":
+          if (playbackRate !== void 0) video.playbackRate = parseFloat(playbackRate);
+          break;
+        case "ended":
+          if (!video.ended) video.currentTime = parseFloat(time ?? "0");
+          break;
+        case "fullscreenchange":
+          if (fullscreen !== void 0) {
+            const shouldBeFullscreen = fullscreen === "true";
+            const isCurrentlyFullscreen = !!document.fullscreenElement;
+            if (shouldBeFullscreen && !isCurrentlyFullscreen) {
+              video.requestFullscreen?.();
+            } else if (!shouldBeFullscreen && isCurrentlyFullscreen) {
+              document.exitFullscreen?.();
+            }
+          }
+          break;
+      }
+    } else {
+      log("LOG THE SCRIPT IN A VIDEO PAGE");
+    }
+    log(message);
+  });
+}

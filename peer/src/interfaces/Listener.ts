@@ -1,4 +1,6 @@
+import type { Message } from "./Message";
+
 export interface Listener {
     event: string;
-    callback: (data: unknown) => void;
+    callback: (message: Message) => void;
 }

@@ -8,11 +8,13 @@ export default defineConfig({
   // build: {
   //   rollupOptions: {
   //     input: {
-  //       streamer: resolve(__dirname, 'src/classes/plugins/youtube/streamer.ts'),
-  //       listener: resolve(__dirname, 'src/classes/plugins/youtube/listener.ts'),
+  //       // streamer: resolve(__dirname, 'src/classes/plugins/youtube/streamer.ts'),
+  //       // listener: resolve(__dirname, 'src/classes/plugins/youtube/listener.ts'),
+  //       reloader: resolve(__dirname, 'src/workers/reloader.ts'),
   //     },
   //     output: {
   //       inlineDynamicImports: true,
+  //       entryFileNames: '[name].js',
   //     },
   //   },
   //   outDir: 'dist',
