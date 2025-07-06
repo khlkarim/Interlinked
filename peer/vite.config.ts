@@ -5,19 +5,20 @@ import react from '@vitejs/plugin-react-swc'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // publicDir: false,
   // build: {
+  //   emptyOutDir: false, // Don't clear previous files, just override when necessary
   //   rollupOptions: {
   //     input: {
-  //       // streamer: resolve(__dirname, 'src/classes/plugins/youtube/streamer.ts'),
-  //       // listener: resolve(__dirname, 'src/classes/plugins/youtube/listener.ts'),
-  //       reloader: resolve(__dirname, 'src/workers/reloader.ts'),
+  //       streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
+  //       listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
   //     },
   //     output: {
   //       inlineDynamicImports: true,
   //       entryFileNames: '[name].js',
   //     },
   //   },
-  //   outDir: 'dist',
+  //   outDir: 'public/plugins/youtube',
   //   minify: false,
   // },
 })

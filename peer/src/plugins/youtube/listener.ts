@@ -1,0 +1,77 @@
+import type { Message } from "../../interfaces/Message";
+import { log } from "../../utils/logger";
+import { Peer } from "../../classes/p2p/Peer";
+import { addListeners } from "../utils/genericListeners";
+
+addListeners();
+const peer = new Peer();
+
+chrome.runtime.onMessage.addListener((message: Message) => {
+    if(message.type === 'TARGET') {
+        peer.on('REGISTERED', () => {
+            peer.listen(message.data.target);
+            setHandlers();
+        });
+    }
+});
+
+function setHandlers() {
+    peer.on('TEST', (message) => {
+        log(message);
+    });
+
+    peer.on('VIDEO', (message) => {
+        const video = document.querySelector<HTMLVideoElement>('video');
+
+        if (video) {
+            const { action, time, volume, muted, playbackRate, fullscreen } = message.data;
+
+            switch (action?.toUpperCase()) {
+                case 'PLAY':
+                    if (video.paused) video.play();
+                    if (time !== undefined && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
+                        video.currentTime = parseFloat(time);
+                    }
+                    break;
+                case 'PAUSE':
+                    if (!video.paused) video.pause();
+                    if (time !== undefined && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
+                        video.currentTime = parseFloat(time);
+                    }
+                    break;
+                case 'SEEKED':
+                    if (time !== undefined) {
+                        video.currentTime = parseFloat(time);
+                    }
+                    break;
+                case 'VOLUMECHANGE':
+                    if (volume !== undefined) video.volume = parseFloat(volume);
+                    if (muted !== undefined) video.muted = muted === 'true';
+                    break;
+                case 'RATECHANGE':
+                    if (playbackRate !== undefined) video.playbackRate = parseFloat(playbackRate);
+                    break;
+                case 'ENDED':
+                    if (!video.ended) video.currentTime = parseFloat(time ?? '0');
+                    break;
+                case 'FULLSCREENCHANGE':
+                    if (fullscreen !== undefined) {
+                        const shouldBeFullscreen = fullscreen === 'true';
+                        const isCurrentlyFullscreen = !!document.fullscreenElement;
+                        if (shouldBeFullscreen && !isCurrentlyFullscreen) {
+                            video.requestFullscreen?.();
+                        } else if (!shouldBeFullscreen && isCurrentlyFullscreen) {
+                            document.exitFullscreen?.();
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            log('LOG THE SCRIPT IN A VIDEO PAGE');
+        }
+
+        log(message);
+    });
+}

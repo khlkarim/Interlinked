@@ -3493,15 +3493,15 @@ class Peer {
     this.signaling.register(this.setUUID.bind(this));
     this.registerICECandidateHandler();
   }
-  setUUID(uuid2) {
-    this.uuid = uuid2;
+  setUUID(uuid) {
+    this.uuid = uuid;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback({ type: "uuid", data: { uuid: uuid2 } });
+      listener.callback({ type: "UUID", data: { uuid } });
     });
   }
   on(event, callback) {
-    if (event === "registered") {
+    if (event === "REGISTERED") {
       this.listeners.push({ event, callback });
     }
     if (this.parent) {
@@ -3517,12 +3517,12 @@ class Peer {
     log("Enabling stream mode");
     this.signaling.on("offer", this.handleOffer.bind(this));
   }
-  listen(uuid2) {
+  listen(uuid) {
     if (!this.uuid) {
       throw new Error("Peer is not registered");
     }
-    log("Listening to UUID:", uuid2);
-    this.parent = new PeerConnection(this.uuid, uuid2);
+    log("Listening to UUID:", uuid);
+    this.parent = new PeerConnection(this.uuid, uuid);
     this.parent.createDataChannel();
     this.signaling.on("answer", this.parent.handleAnswer.bind(this.parent));
   }
@@ -3554,103 +3554,59 @@ class Peer {
   }
 }
 function addListeners() {
-  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
-    if (message.type === "IS_INJECTED") {
-      log("IS INJECTED MESSAGE RECEIVED");
-      sendResponse({
-        injected: true
-      });
-    }
+  chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "KILL") {
-      log("KILL MESSAGE RECEIVED");
+      log("KILL message received");
     }
   });
 }
-let uuid;
-let tabId;
 addListeners();
 const peer = new Peer();
 chrome.runtime.onMessage.addListener((message) => {
-  if (message.type === "uuid") {
-    uuid = message.data.uuid;
-    peer.on("registered", () => {
-      peer.listen(message.data.uuid);
+  if (message.type === "TARGET") {
+    peer.on("REGISTERED", () => {
+      peer.listen(message.data.target);
       setHandlers();
     });
   }
-  if (message.type === "tabId" && message.data.tabId) {
-    tabId = parseInt(message.data.tabId);
-    log("RECEIVED TABID:", tabId);
-  }
 });
 function setHandlers() {
-  peer.on("test", (message) => {
+  peer.on("TEST", (message) => {
     log(message);
   });
-  peer.on("goto", (message) => {
-    if (message.data.href && tabId) {
-      window.location.href = message.data.href;
-      chrome.runtime.sendMessage({
-        type: "RELOAD_ME",
-        data: {
-          tabId,
-          name: "Youtube",
-          targetUrl: "*://www.youtube.com/*",
-          streamerPath: "plugins/youtube/streamer.js",
-          listenerPath: "plugins/youtube/listener.js",
-          uuid
-        }
-      });
-    }
-  });
-  peer.on("video", (message) => {
+  peer.on("VIDEO", (message) => {
     const video = document.querySelector("video");
     if (video) {
-      const currentHref = window.location.href;
-      const { action, time, volume, muted, playbackRate, fullscreen, href } = message.data;
-      if (tabId && href && href !== currentHref) {
-        window.location.href = message.data.href;
-        chrome.runtime.sendMessage({
-          type: "RELOAD_ME",
-          data: {
-            tabId,
-            name: "Youtube",
-            targetUrl: "*://www.youtube.com/*",
-            streamerPath: "plugins/youtube/streamer.js",
-            listenerPath: "plugins/youtube/listener.js",
-            uuid
-          }
-        });
-      }
-      switch (action) {
-        case "play":
+      const { action, time, volume, muted, playbackRate, fullscreen } = message.data;
+      switch (action?.toUpperCase()) {
+        case "PLAY":
           if (video.paused) video.play();
           if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
             video.currentTime = parseFloat(time);
           }
           break;
-        case "pause":
+        case "PAUSE":
           if (!video.paused) video.pause();
           if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
             video.currentTime = parseFloat(time);
           }
           break;
-        case "seeked":
+        case "SEEKED":
           if (time !== void 0) {
             video.currentTime = parseFloat(time);
           }
           break;
-        case "volumechange":
+        case "VOLUMECHANGE":
           if (volume !== void 0) video.volume = parseFloat(volume);
           if (muted !== void 0) video.muted = muted === "true";
           break;
-        case "ratechange":
+        case "RATECHANGE":
           if (playbackRate !== void 0) video.playbackRate = parseFloat(playbackRate);
           break;
-        case "ended":
+        case "ENDED":
           if (!video.ended) video.currentTime = parseFloat(time ?? "0");
           break;
-        case "fullscreenchange":
+        case "FULLSCREENCHANGE":
           if (fullscreen !== void 0) {
             const shouldBeFullscreen = fullscreen === "true";
             const isCurrentlyFullscreen = !!document.fullscreenElement;

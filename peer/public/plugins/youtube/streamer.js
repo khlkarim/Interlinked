@@ -3497,11 +3497,11 @@ class Peer {
     this.uuid = uuid;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback({ type: "uuid", data: { uuid } });
+      listener.callback({ type: "UUID", data: { uuid } });
     });
   }
   on(event, callback) {
-    if (event === "registered") {
+    if (event === "REGISTERED") {
       this.listeners.push({ event, callback });
     }
     if (this.parent) {
@@ -3554,138 +3554,122 @@ class Peer {
   }
 }
 function addListeners() {
-  chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
-    if (message.type === "IS_INJECTED") {
-      log("IS INJECTED MESSAGE RECEIVED");
-      sendResponse({
-        injected: true
-      });
-    }
+  chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "KILL") {
-      log("KILL MESSAGE RECEIVED");
+      log("KILL message received");
     }
   });
 }
 addListeners();
 const peer = new Peer();
-peer.on("registered", (message) => {
-  chrome.runtime.sendMessage(message);
+peer.on("REGISTERED", (message) => {
+  peer.stream();
+  chrome.runtime.sendMessage({
+    type: "STREAMER_UUID",
+    data: {
+      uuid: message.data.uuid
+    }
+  });
 });
-peer.stream();
 document.addEventListener("keydown", (event) => {
   if (event.key === "T" || event.key === "t") {
     peer.broadcast({
-      type: "test",
+      type: "TEST",
       data: {
         test: "testing"
       }
     });
   }
 });
-let video = null;
+let video = document.querySelector("video");
 window.addEventListener("yt-navigate-finish", () => {
-  log("Navigation finished:", window.location.href);
-  peer.broadcast({
-    type: "goto",
-    data: {
-      href: window.location.href
+  video = document.querySelector("video");
+});
+if (video !== null) {
+  video.addEventListener("play", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "PLAY",
+          time: video.currentTime.toString()
+        }
+      });
     }
   });
-  video = document.querySelector("video");
-  if (video !== null) {
-    const videoHref = window.location.href;
-    video.addEventListener("play", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "play",
-            time: video.currentTime.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    video.addEventListener("pause", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "pause",
-            time: video.currentTime.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    video.addEventListener("seeked", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "seeked",
-            time: video.currentTime.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    video.addEventListener("volumechange", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "volumechange",
-            volume: video.volume.toString(),
-            muted: video.muted.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    video.addEventListener("ratechange", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "ratechange",
-            playbackRate: video.playbackRate.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    video.addEventListener("ended", () => {
-      if (video) {
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "ended",
-            time: video.currentTime.toString(),
-            href: videoHref
-          }
-        });
-      }
-    });
-    [
-      "fullscreenchange",
-      "webkitfullscreenchange",
-      "mozfullscreenchange",
-      "msfullscreenchange"
-    ].forEach((eventType) => {
-      document.addEventListener(eventType, () => {
-        const isFullscreen = !!document.fullscreenElement;
-        peer.broadcast({
-          type: "video",
-          data: {
-            action: "fullscreenchange",
-            fullscreen: isFullscreen.toString(),
-            href: videoHref
-          }
-        });
+  video.addEventListener("pause", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "PAUSE",
+          time: video.currentTime.toString()
+        }
+      });
+    }
+  });
+  video.addEventListener("seeked", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "SEEKED",
+          time: video.currentTime.toString()
+        }
+      });
+    }
+  });
+  video.addEventListener("volumechange", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "VOLUMECHANGE",
+          volume: video.volume.toString(),
+          muted: video.muted.toString()
+        }
+      });
+    }
+  });
+  video.addEventListener("ratechange", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "RATECHANGE",
+          playbackrate: video.playbackRate.toString()
+        }
+      });
+    }
+  });
+  video.addEventListener("ended", () => {
+    if (video) {
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "ENDED",
+          time: video.currentTime.toString()
+        }
+      });
+    }
+  });
+  [
+    "fullscreenchange",
+    "webkitfullscreenchange",
+    "mozfullscreenchange",
+    "msfullscreenchange"
+  ].forEach((eventType) => {
+    document.addEventListener(eventType, () => {
+      const isFullscreen = !!document.fullscreenElement;
+      peer.broadcast({
+        type: "VIDEO",
+        data: {
+          action: "FULLSCREENCHANGE",
+          fullscreen: isFullscreen.toString()
+        }
       });
     });
-  } else {
-    log("LOG THE SCRIPT IN A VIDEO PAGE");
-  }
-});
+  });
+} else {
+  log("LOG THE SCRIPT IN A VIDEO PAGE");
+}

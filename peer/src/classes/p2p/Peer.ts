@@ -26,12 +26,12 @@ export class Peer {
         log('Assigned local UUID:', this.uuid);
 
         this.listeners.forEach((listener) => {
-            listener.callback({ type: 'uuid', data: { uuid } });
+            listener.callback({ type: 'UUID', data: { uuid } });
         });
     }
 
     on(event: string, callback: (message: Message) => void) {
-        if(event === 'registered') {
+        if(event === 'REGISTERED') {
             this.listeners.push({ event, callback });
         }
         if(this.parent) {
