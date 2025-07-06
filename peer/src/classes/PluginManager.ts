@@ -13,7 +13,7 @@ interface Listener {
 type Page = Streamer | Listener;
 
 export class PluginManager {
-    private pages: Map<number, Page> = new Map();
+    pages: Map<number, Page> = new Map();
 
     constructor() {
         this.loadPages();
@@ -40,7 +40,20 @@ export class PluginManager {
                 return;
             }
             const tabId = tabs[0].id;
-            this.injectStreamer(tabId, script);
+
+            if(this.pages.has(tabId)) {
+                chrome.tabs.reload(tabId, () => {
+                    const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+                        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                            this.injectStreamer(tabId, script);
+                            chrome.tabs.onUpdated.removeListener(listener);
+                        }
+                    };
+                    chrome.tabs.onUpdated.addListener(listener);
+                });
+            } else {
+                this.injectStreamer(tabId, script);
+            }
         });
     }
 
@@ -51,7 +64,20 @@ export class PluginManager {
                 return;
             }
             const tabId = tabs[0].id;
-            this.injectListener(tabId, script, target);
+            
+            if(this.pages.has(tabId)) {
+                chrome.tabs.reload(tabId, () => {
+                    const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+                        if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                            this.injectListener(tabId, script, target);
+                            chrome.tabs.onUpdated.removeListener(listener);
+                        }
+                    };
+                    chrome.tabs.onUpdated.addListener(listener);
+                });
+            } else {
+                this.injectListener(tabId, script, target);
+            }
         });
     }
 
@@ -100,7 +126,7 @@ export class PluginManager {
             chrome.tabs.sendMessage(tabId, {
                 type: 'TARGET',
                 data: { target }
-            })
+            });
         });
     }
 

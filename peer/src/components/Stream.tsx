@@ -52,7 +52,7 @@ function Stream() {
                 streamer.uuid &&
                 streamer.script === plugin?.streamerPath
             ) {
-            setUUID(streamer.uuid);
+                setUUID(streamer.uuid);
             }
         });
     }
@@ -78,7 +78,6 @@ function Stream() {
                 />
                 <Button name="Stream" handleClick={handleStream} />
             </div>
-
         </div>
     );
 }

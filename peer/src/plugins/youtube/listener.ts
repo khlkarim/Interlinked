@@ -20,6 +20,15 @@ function setHandlers() {
         log(message);
     });
 
+    peer.on('GOTO', (message) => {
+        chrome.runtime.sendMessage({
+            type: 'GOTO',
+            data: {
+                href: message.data.href
+            }
+        });
+    });
+
     peer.on('VIDEO', (message) => {
         const video = document.querySelector<HTMLVideoElement>('video');
 
@@ -29,30 +38,30 @@ function setHandlers() {
             switch (action?.toUpperCase()) {
                 case 'PLAY':
                     if (video.paused) video.play();
-                    if (time !== undefined && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
-                        video.currentTime = parseFloat(time);
+                    if (time !== undefined && Math.abs(video.currentTime - Number(time)) > 0.5) {
+                        video.currentTime = Number(time);
                     }
                     break;
                 case 'PAUSE':
                     if (!video.paused) video.pause();
-                    if (time !== undefined && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
-                        video.currentTime = parseFloat(time);
+                    if (time !== undefined && Math.abs(video.currentTime - Number(time)) > 0.5) {
+                        video.currentTime = Number(time);
                     }
                     break;
                 case 'SEEKED':
-                    if (time !== undefined) {
-                        video.currentTime = parseFloat(time);
+                    if (time !== undefined && Math.abs(video.currentTime - Number(time)) > 0.5) {
+                        video.currentTime = Number(time);
                     }
                     break;
                 case 'VOLUMECHANGE':
-                    if (volume !== undefined) video.volume = parseFloat(volume);
+                    if (volume !== undefined) video.volume = Number(volume);
                     if (muted !== undefined) video.muted = muted === 'true';
                     break;
                 case 'RATECHANGE':
-                    if (playbackRate !== undefined) video.playbackRate = parseFloat(playbackRate);
+                    if (playbackRate !== undefined) video.playbackRate = Number(playbackRate);
                     break;
                 case 'ENDED':
-                    if (!video.ended) video.currentTime = parseFloat(time ?? '0');
+                    if (!video.ended && time !== undefined) video.currentTime = Number(time);
                     break;
                 case 'FULLSCREENCHANGE':
                     if (fullscreen !== undefined) {

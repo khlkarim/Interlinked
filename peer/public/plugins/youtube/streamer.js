@@ -3446,10 +3446,9 @@ class PeerConnection {
     this.channel.onerror = (e) => log("Data channel error:", e);
   }
   handleMessage(event) {
-    log("RECEIVED MESSAGE:", event);
     if (event.data) {
       const message = JSON.parse(event.data);
-      log("PARSED MESSAGE:", message);
+      log("RECEIVED MESSAGE:", message);
       this.listeners.forEach((listener) => {
         if (listener.event === message.type) {
           listener.callback(message);
@@ -3497,7 +3496,9 @@ class Peer {
     this.uuid = uuid;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback({ type: "UUID", data: { uuid } });
+      if (listener.event === "REGISTERED") {
+        listener.callback({ type: "UUID", data: { uuid } });
+      }
     });
   }
   on(event, callback) {
@@ -3507,6 +3508,13 @@ class Peer {
     if (this.parent) {
       this.parent.on(event, callback);
     }
+  }
+  send(uuid, message) {
+    this.children.forEach((child) => {
+      if (child.destination === uuid) {
+        child.send(message);
+      }
+    });
   }
   broadcast(message) {
     this.children.forEach((child) => {
@@ -3584,6 +3592,12 @@ document.addEventListener("keydown", (event) => {
 let video = document.querySelector("video");
 window.addEventListener("yt-navigate-finish", () => {
   video = document.querySelector("video");
+  peer.broadcast({
+    type: "GOTO",
+    data: {
+      href: window.location.href
+    }
+  });
 });
 if (video !== null) {
   video.addEventListener("play", () => {
@@ -3637,7 +3651,7 @@ if (video !== null) {
         type: "VIDEO",
         data: {
           action: "RATECHANGE",
-          playbackrate: video.playbackRate.toString()
+          playbackRate: video.playbackRate.toString()
         }
       });
     }

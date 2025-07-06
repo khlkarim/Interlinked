@@ -26,7 +26,9 @@ export class Peer {
         log('Assigned local UUID:', this.uuid);
 
         this.listeners.forEach((listener) => {
-            listener.callback({ type: 'UUID', data: { uuid } });
+            if(listener.event === 'REGISTERED') {
+                listener.callback({ type: 'UUID', data: { uuid } });
+            }
         });
     }
 
@@ -37,6 +39,14 @@ export class Peer {
         if(this.parent) {
             this.parent.on(event, callback);
         }
+    }
+
+    send(uuid: string, message: Message) {
+        this.children.forEach((child) => {
+            if(child.destination === uuid) {
+                child.send(message);
+            }
+        });
     }
 
     broadcast(message: Message) {

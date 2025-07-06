@@ -11,7 +11,8 @@ export default defineConfig({
   //   rollupOptions: {
   //     input: {
   //       streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
-  //       listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
+  //       // listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
+  //       // reloader: resolve(__dirname, 'src/workers/reloader.ts'),
   //     },
   //     output: {
   //       inlineDynamicImports: true,
@@ -19,6 +20,7 @@ export default defineConfig({
   //     },
   //   },
   //   outDir: 'public/plugins/youtube',
+  //   // outDir: 'public/workers',
   //   minify: false,
   // },
 })

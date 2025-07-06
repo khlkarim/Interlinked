@@ -3446,10 +3446,9 @@ class PeerConnection {
     this.channel.onerror = (e) => log("Data channel error:", e);
   }
   handleMessage(event) {
-    log("RECEIVED MESSAGE:", event);
     if (event.data) {
       const message = JSON.parse(event.data);
-      log("PARSED MESSAGE:", message);
+      log("RECEIVED MESSAGE:", message);
       this.listeners.forEach((listener) => {
         if (listener.event === message.type) {
           listener.callback(message);
@@ -3497,7 +3496,9 @@ class Peer {
     this.uuid = uuid;
     log("Assigned local UUID:", this.uuid);
     this.listeners.forEach((listener) => {
-      listener.callback({ type: "UUID", data: { uuid } });
+      if (listener.event === "REGISTERED") {
+        listener.callback({ type: "UUID", data: { uuid } });
+      }
     });
   }
   on(event, callback) {
@@ -3507,6 +3508,13 @@ class Peer {
     if (this.parent) {
       this.parent.on(event, callback);
     }
+  }
+  send(uuid, message) {
+    this.children.forEach((child) => {
+      if (child.destination === uuid) {
+        child.send(message);
+      }
+    });
   }
   broadcast(message) {
     this.children.forEach((child) => {
@@ -3574,6 +3582,14 @@ function setHandlers() {
   peer.on("TEST", (message) => {
     log(message);
   });
+  peer.on("GOTO", (message) => {
+    chrome.runtime.sendMessage({
+      type: "GOTO",
+      data: {
+        href: message.data.href
+      }
+    });
+  });
   peer.on("VIDEO", (message) => {
     const video = document.querySelector("video");
     if (video) {
@@ -3581,30 +3597,30 @@ function setHandlers() {
       switch (action?.toUpperCase()) {
         case "PLAY":
           if (video.paused) video.play();
-          if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
-            video.currentTime = parseFloat(time);
+          if (time !== void 0 && Math.abs(video.currentTime - Number(time)) > 0.5) {
+            video.currentTime = Number(time);
           }
           break;
         case "PAUSE":
           if (!video.paused) video.pause();
-          if (time !== void 0 && Math.abs(video.currentTime - parseFloat(time)) > 0.5) {
-            video.currentTime = parseFloat(time);
+          if (time !== void 0 && Math.abs(video.currentTime - Number(time)) > 0.5) {
+            video.currentTime = Number(time);
           }
           break;
         case "SEEKED":
-          if (time !== void 0) {
-            video.currentTime = parseFloat(time);
+          if (time !== void 0 && Math.abs(video.currentTime - Number(time)) > 0.5) {
+            video.currentTime = Number(time);
           }
           break;
         case "VOLUMECHANGE":
-          if (volume !== void 0) video.volume = parseFloat(volume);
+          if (volume !== void 0) video.volume = Number(volume);
           if (muted !== void 0) video.muted = muted === "true";
           break;
         case "RATECHANGE":
-          if (playbackRate !== void 0) video.playbackRate = parseFloat(playbackRate);
+          if (playbackRate !== void 0) video.playbackRate = Number(playbackRate);
           break;
         case "ENDED":
-          if (!video.ended) video.currentTime = parseFloat(time ?? "0");
+          if (!video.ended && time !== void 0) video.currentTime = Number(time);
           break;
         case "FULLSCREENCHANGE":
           if (fullscreen !== void 0) {

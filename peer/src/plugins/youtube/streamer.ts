@@ -16,7 +16,6 @@ peer.on('REGISTERED', (message) => {
     })
 });
 
-
 document.addEventListener('keydown', (event) => {
     if(event.key === 'T' || event.key === 't')
     {
@@ -33,6 +32,13 @@ let video = document.querySelector<HTMLVideoElement>('video');
 
 window.addEventListener('yt-navigate-finish', () => {
     video = document.querySelector<HTMLVideoElement>('video');
+
+    peer.broadcast({
+        type: 'GOTO',
+        data: {
+            href: window.location.href
+        }
+    })
 });
 
 if (video !== null) {
@@ -91,7 +97,7 @@ if (video !== null) {
             type: 'VIDEO',
             data: {
             action: 'RATECHANGE',
-            playbackrate: video.playbackRate.toString(),
+            playbackRate: video.playbackRate.toString(),
             }
         });
         }

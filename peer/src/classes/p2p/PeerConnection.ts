@@ -8,8 +8,8 @@ import { Signaling } from "./Signaling";
 export class PeerConnection {
     private readonly signaling: Signaling;
 
-    private readonly source: string;
-    private readonly destination: string;
+    readonly source: string;
+    readonly destination: string;
     private readonly pc: RTCPeerConnection;
     private channel?: RTCDataChannel;
 
@@ -23,6 +23,7 @@ export class PeerConnection {
 
         this.pc = new RTCPeerConnection({ iceServers });
         this.setCallbacks();
+
         log(`PeerConnection created: source=${source}, destination=${destination}`);
     }
 
@@ -140,10 +141,9 @@ export class PeerConnection {
     }
 
     private handleMessage(event: MessageEvent<string>) {
-        log('RECEIVED MESSAGE:', event);
         if(event.data) {
             const message = JSON.parse(event.data);
-            log('PARSED MESSAGE:', message);
+            log('RECEIVED MESSAGE:', message);
             
             this.listeners.forEach((listener) => {
                 if(listener.event === message.type) {
