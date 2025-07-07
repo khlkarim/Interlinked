@@ -58,10 +58,7 @@ function setHandlers() {
                     if (muted !== undefined) video.muted = muted === 'true';
                     break;
                 case 'RATECHANGE':
-                    // Note: property is sometimes 'playbackrate' (lowercase) in your broadcast
-                    if (message.data.playbackrate !== undefined) {
-                        video.playbackRate = Number(message.data.playbackrate);
-                    } else if (playbackRate !== undefined) {
+                    if (playbackRate !== undefined) {
                         video.playbackRate = Number(playbackRate);
                     }
                     break;
@@ -94,7 +91,6 @@ function setHandlers() {
                     if (message.data.volume !== undefined) video.volume = Number(message.data.volume);
                     if (message.data.muted !== undefined) video.muted = message.data.muted === 'true';
                     if (message.data.playbackrate !== undefined) video.playbackRate = Number(message.data.playbackrate);
-                    // Handle ended state if needed
                     if (message.data.ended === 'true' && !video.ended) {
                         video.currentTime = video.duration;
                     }

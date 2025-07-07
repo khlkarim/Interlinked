@@ -21,7 +21,7 @@ function Stream({ action, handleAction }: StreamProps) {
     const [streaming, setStreaming] = useState<boolean>(false);
 
     useEffect(() => {
-        if(plugin || !pluginManager) return;
+        if(!pluginManager) return;
 
         pluginManager.activeTabId()
             .then((tabId) => {
@@ -37,7 +37,7 @@ function Stream({ action, handleAction }: StreamProps) {
                         });
                 }
             });
-    }, [pluginManager, plugin, handleAction]);
+    }, [pluginManager, handleAction]);
 
     function handleStream() {
         if(!pluginManager) {

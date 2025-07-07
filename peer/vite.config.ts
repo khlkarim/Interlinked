@@ -7,12 +7,12 @@ export default defineConfig({
   plugins: [react()],
   // publicDir: false,
   // build: {
-  //   emptyOutDir: false, // Don't clear previous files, just override when necessary
+  //   emptyOutDir: false,
   //   rollupOptions: {
   //     input: {
-  //       // streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
+  //       streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
   //       listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
-  //       // reloader: resolve(__dirname, 'src/workers/reloader.ts'),
+  //       reloader: resolve(__dirname, 'src/workers/reloader.ts'),
   //     },
   //     output: {
   //       inlineDynamicImports: true,
@@ -20,7 +20,7 @@ export default defineConfig({
   //     },
   //   },
   //   outDir: 'public/plugins/youtube',
-  //   // outDir: 'public/workers',
+  //   outDir: 'public/workers',
   //   minify: false,
   // },
 })

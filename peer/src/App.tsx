@@ -12,7 +12,7 @@ function App() {
   const [action, setAction] = useState<Action>(null);
 
   function handleAction(action: Action) {
-    log('action :', action);
+    log('Action :', action);
     setAction(action);
   }
 

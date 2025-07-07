@@ -3643,9 +3643,7 @@ function setHandlers() {
           if (muted !== void 0) video.muted = muted === "true";
           break;
         case "RATECHANGE":
-          if (message.data.playbackrate !== void 0) {
-            video.playbackRate = Number(message.data.playbackrate);
-          } else if (playbackRate !== void 0) {
+          if (playbackRate !== void 0) {
             video.playbackRate = Number(playbackRate);
           }
           break;

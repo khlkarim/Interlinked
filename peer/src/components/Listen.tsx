@@ -21,7 +21,7 @@ function Listen({ action, handleAction }: ListenProps) {
     const [listening, setListening] = useState<boolean>(false);
 
     useEffect(() => {
-        if(plugin || !pluginManager) return;
+        if(!pluginManager) return;
 
         pluginManager.activeTabId()
             .then((tabId) => {
@@ -37,7 +37,7 @@ function Listen({ action, handleAction }: ListenProps) {
                         });
                 }
             });
-    }, [pluginManager, plugin, handleAction]);
+    }, [pluginManager, handleAction]);
    
 
     function handleListen() {
@@ -68,7 +68,6 @@ function Listen({ action, handleAction }: ListenProps) {
     function handlePlugin(plugin: Plugin | null) {
         setPlugin(plugin);
         if(!plugin) {
-            setUUID(null);
             setListening(false);
             return;
         }
@@ -89,17 +88,13 @@ function Listen({ action, handleAction }: ListenProps) {
                     setListening(true);
                     log(true);
                 } else {
-                    setUUID(null);
                     setListening(false);
                     log(false);    
                 }
             });
     }
 
-    function handleInput(uuid: string) {
-        setUUID(uuid);
-    }
-
+    
     function handleStop() {
         if(!pluginManager) {
             log('Inaccessible plugin manager');
@@ -110,17 +105,20 @@ function Listen({ action, handleAction }: ListenProps) {
             .then((tabId) => {
                 if(tabId) {
                     pluginManager.kill(tabId)
-                        .then(() => {
-                            setUUID(null);
-                            handleAction(null);
-                            setListening(false);
-                        });
+                    .then(() => {
+                        handleAction(null);
+                        setListening(false);
+                    });
                 }
             });
-    }
+        }
+        
+        function handleInput(uuid: string) {
+            setUUID(uuid);
+        }
 
-    return (
-        <div className="flex column">
+        return (
+            <div className="flex column">
             <Input 
                 type="text" 
                 name="listener-from" 

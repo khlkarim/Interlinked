@@ -105,7 +105,7 @@ if (video !== null) {
                 type: 'VIDEO',
                 data: {
                     action: 'RATECHANGE',
-                    playbackrate: video.playbackRate.toString(),
+                    playbackRate: video.playbackRate.toString(),
                 }
             });
         }
@@ -151,7 +151,7 @@ if (video !== null) {
                     paused: video.paused.toString(),
                     volume: video.volume.toString(),
                     muted: video.muted.toString(),
-                    playbackrate: video.playbackRate.toString(),
+                    playbackRate: video.playbackRate.toString(),
                     ended: video.ended.toString(),
                     fullscreen: (!!document.fullscreenElement).toString(),
                 }
