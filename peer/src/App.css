@@ -41,6 +41,17 @@ button.box:hover
   background-color: white;
 }
 
+button.box:disabled
+{
+  color: lightgray;
+  border-color: lightgray;
+}
+button.box:disabled:hover
+{
+  color: lightgray;
+  background-color: black;
+}
+
 input.box
 {
   text-align: center;

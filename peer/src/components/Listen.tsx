@@ -67,9 +67,33 @@ function Listen({ action, handleAction }: ListenProps) {
 
     function handlePlugin(plugin: Plugin | null) {
         setPlugin(plugin);
-        if (!pluginManager || !plugin) return;
+        if(!plugin) {
+            setUUID(null);
+            setListening(false);
+            return;
+        }
+        if (!pluginManager) {
+            log('Inaccessible plugin manager');
+            return;
+        }
 
-        handleListening();
+        log('handle listening: ');
+
+        pluginManager.activeTabId(plugin.targetUrl)
+            .then((tabId) => {
+                return pluginManager.queryInjections(tabId, 'listener', plugin);
+            })
+            .then((injection) => {
+                if(injection) {
+                    setUUID(injection.uuid);
+                    setListening(true);
+                    log(true);
+                } else {
+                    setUUID(null);
+                    setListening(false);
+                    log(false);    
+                }
+            });
     }
 
     function handleInput(uuid: string) {
@@ -93,23 +117,6 @@ function Listen({ action, handleAction }: ListenProps) {
                         });
                 }
             });
-    }
-
-    async function handleListening() {
-        if(!pluginManager || !plugin) {
-            setListening(false);
-            return;
-        }
-
-        const tabId = await pluginManager.activeTabId(plugin.targetUrl);
-        const injection = await pluginManager.queryInjections(tabId, 'listener', plugin);
-
-        if(injection) {
-            setUUID(injection.uuid);
-            setListening(true);
-        } else {
-            setListening(false);
-        }
     }
 
     return (

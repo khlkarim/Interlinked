@@ -65,6 +65,7 @@ function Stream({ action, handleAction }: StreamProps) {
         setPlugin(plugin);
         if(!plugin) {
             setUUID(null);
+            setStreaming(false);
             return;
         }
         if (!pluginManager) {
@@ -72,7 +73,23 @@ function Stream({ action, handleAction }: StreamProps) {
             return;
         }
         
-        handleStreaming();
+        log('handle Streaming: ');
+
+        pluginManager.activeTabId(plugin.targetUrl)
+            .then((tabId) => {
+                return pluginManager.queryInjections(tabId, 'streamer', plugin);
+            })
+            .then((injection) => {
+                if(injection) {
+                    setUUID(injection.uuid);
+                    setStreaming(true);
+                    log(true);
+                } else {
+                    setUUID(null);
+                    setStreaming(false);
+                    log(false);    
+                }
+            });
     }
 
     function handleStop() {
@@ -92,23 +109,6 @@ function Stream({ action, handleAction }: StreamProps) {
                         });
                 }
             });
-    }
-
-    async function handleStreaming() {
-        if(!pluginManager || !plugin) {
-            setStreaming(false);
-            return;
-        }
-
-        const tabId = await pluginManager.activeTabId(plugin.targetUrl);
-        const injection = await pluginManager.queryInjections(tabId, 'streamer', plugin);
-
-        if(injection) {
-            setUUID(injection.uuid);
-            setStreaming(true);
-        } else {
-            setStreaming(false);
-        }
     }
 
     return (
