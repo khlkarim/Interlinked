@@ -3460,6 +3460,26 @@ class PeerConnection {
     const channel = event.target;
     if (channel && channel.readyState) {
       log("Channel status:", channel.readyState);
+      if (channel.readyState === "closed") {
+        this.listeners.forEach((listener) => {
+          if (listener.event === "CHANNEL_CLOSED") {
+            listener.callback({
+              type: "CHANNEL_CLOSED",
+              data: {}
+            });
+          }
+        });
+      }
+      if (channel.readyState === "open") {
+        this.listeners.forEach((listener) => {
+          if (listener.event === "CHANNEL_OPENED") {
+            listener.callback({
+              type: "CHANNEL_OPENED",
+              data: {}
+            });
+          }
+        });
+      }
     }
   }
   send(message) {
@@ -3504,6 +3524,11 @@ class Peer {
   on(event, callback) {
     if (event === "REGISTERED") {
       this.listeners.push({ event, callback });
+      return;
+    }
+    if (event === "NEW_CHILD") {
+      this.listeners.push({ event, callback });
+      return;
     }
     if (this.parent) {
       this.parent.on(event, callback);
@@ -3543,6 +3568,25 @@ class Peer {
     pc.handleOffer(msg);
     this.children.push(pc);
     log("Child PeerConnection added. Total children:", this.children.length);
+    pc.on("CHANNEL_CLOSED", () => {
+      const index = this.children.indexOf(pc);
+      if (index !== -1) {
+        this.children.splice(index, 1);
+        log("Child PeerConnection removed. Total children:", this.children.length);
+      }
+    });
+    pc.on("CHANNEL_OPENED", () => {
+      this.listeners.forEach((listener) => {
+        if (listener.event === "NEW_CHILD") {
+          listener.callback({
+            type: "NEW_CHILD",
+            data: {
+              uuid: pc.destination
+            }
+          });
+        }
+      });
+    });
   }
   registerICECandidateHandler() {
     this.signaling.on("new-ice-candidate", this.handleICECandidate.bind(this));
@@ -3561,14 +3605,6 @@ class Peer {
     log("No matching PeerConnection found for ICE candidate", msg);
   }
 }
-function addListeners() {
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === "KILL") {
-      log("KILL message received");
-    }
-  });
-}
-addListeners();
 const peer = new Peer();
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "TARGET") {
@@ -3583,6 +3619,7 @@ function setHandlers() {
     log(message);
   });
   peer.on("GOTO", (message) => {
+    if (message.data.href === window.location.href) return;
     chrome.runtime.sendMessage({
       type: "GOTO",
       data: {
@@ -3617,7 +3654,11 @@ function setHandlers() {
           if (muted !== void 0) video.muted = muted === "true";
           break;
         case "RATECHANGE":
-          if (playbackRate !== void 0) video.playbackRate = Number(playbackRate);
+          if (message.data.playbackrate !== void 0) {
+            video.playbackRate = Number(message.data.playbackrate);
+          } else if (playbackRate !== void 0) {
+            video.playbackRate = Number(playbackRate);
+          }
           break;
         case "ENDED":
           if (!video.ended && time !== void 0) video.currentTime = Number(time);
@@ -3625,6 +3666,33 @@ function setHandlers() {
         case "FULLSCREENCHANGE":
           if (fullscreen !== void 0) {
             const shouldBeFullscreen = fullscreen === "true";
+            const isCurrentlyFullscreen = !!document.fullscreenElement;
+            if (shouldBeFullscreen && !isCurrentlyFullscreen) {
+              video.requestFullscreen?.();
+            } else if (!shouldBeFullscreen && isCurrentlyFullscreen) {
+              document.exitFullscreen?.();
+            }
+          }
+          break;
+        case "SYNC":
+          if (time !== void 0 && Math.abs(video.currentTime - Number(time)) > 0.5) {
+            video.currentTime = Number(time);
+          }
+          if (message.data.paused !== void 0) {
+            if (message.data.paused === "true" && !video.paused) {
+              video.pause();
+            } else if (message.data.paused === "false" && video.paused) {
+              video.play();
+            }
+          }
+          if (message.data.volume !== void 0) video.volume = Number(message.data.volume);
+          if (message.data.muted !== void 0) video.muted = message.data.muted === "true";
+          if (message.data.playbackrate !== void 0) video.playbackRate = Number(message.data.playbackrate);
+          if (message.data.ended === "true" && !video.ended) {
+            video.currentTime = video.duration;
+          }
+          if (message.data.fullscreen !== void 0) {
+            const shouldBeFullscreen = message.data.fullscreen === "true";
             const isCurrentlyFullscreen = !!document.fullscreenElement;
             if (shouldBeFullscreen && !isCurrentlyFullscreen) {
               video.requestFullscreen?.();

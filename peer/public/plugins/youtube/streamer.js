@@ -3460,6 +3460,26 @@ class PeerConnection {
     const channel = event.target;
     if (channel && channel.readyState) {
       log("Channel status:", channel.readyState);
+      if (channel.readyState === "closed") {
+        this.listeners.forEach((listener) => {
+          if (listener.event === "CHANNEL_CLOSED") {
+            listener.callback({
+              type: "CHANNEL_CLOSED",
+              data: {}
+            });
+          }
+        });
+      }
+      if (channel.readyState === "open") {
+        this.listeners.forEach((listener) => {
+          if (listener.event === "CHANNEL_OPENED") {
+            listener.callback({
+              type: "CHANNEL_OPENED",
+              data: {}
+            });
+          }
+        });
+      }
     }
   }
   send(message) {
@@ -3504,6 +3524,11 @@ class Peer {
   on(event, callback) {
     if (event === "REGISTERED") {
       this.listeners.push({ event, callback });
+      return;
+    }
+    if (event === "NEW_CHILD") {
+      this.listeners.push({ event, callback });
+      return;
     }
     if (this.parent) {
       this.parent.on(event, callback);
@@ -3543,6 +3568,25 @@ class Peer {
     pc.handleOffer(msg);
     this.children.push(pc);
     log("Child PeerConnection added. Total children:", this.children.length);
+    pc.on("CHANNEL_CLOSED", () => {
+      const index = this.children.indexOf(pc);
+      if (index !== -1) {
+        this.children.splice(index, 1);
+        log("Child PeerConnection removed. Total children:", this.children.length);
+      }
+    });
+    pc.on("CHANNEL_OPENED", () => {
+      this.listeners.forEach((listener) => {
+        if (listener.event === "NEW_CHILD") {
+          listener.callback({
+            type: "NEW_CHILD",
+            data: {
+              uuid: pc.destination
+            }
+          });
+        }
+      });
+    });
   }
   registerICECandidateHandler() {
     this.signaling.on("new-ice-candidate", this.handleICECandidate.bind(this));
@@ -3561,14 +3605,6 @@ class Peer {
     log("No matching PeerConnection found for ICE candidate", msg);
   }
 }
-function addListeners() {
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === "KILL") {
-      log("KILL message received");
-    }
-  });
-}
-addListeners();
 const peer = new Peer();
 peer.on("REGISTERED", (message) => {
   peer.stream();
@@ -3576,6 +3612,14 @@ peer.on("REGISTERED", (message) => {
     type: "STREAMER_UUID",
     data: {
       uuid: message.data.uuid
+    }
+  });
+});
+peer.on("NEW_CHILD", (message) => {
+  peer.send(message.data.uuid, {
+    type: "GOTO",
+    data: {
+      href: window.location.href
     }
   });
 });
@@ -3651,7 +3695,7 @@ if (video !== null) {
         type: "VIDEO",
         data: {
           action: "RATECHANGE",
-          playbackRate: video.playbackRate.toString()
+          playbackrate: video.playbackRate.toString()
         }
       });
     }
@@ -3683,6 +3727,23 @@ if (video !== null) {
         }
       });
     });
+  });
+  peer.on("NEW_CHILD", (message) => {
+    if (video) {
+      peer.send(message.data.uuid, {
+        type: "VIDEO",
+        data: {
+          action: "SYNC",
+          time: video.currentTime.toString(),
+          paused: video.paused.toString(),
+          volume: video.volume.toString(),
+          muted: video.muted.toString(),
+          playbackrate: video.playbackRate.toString(),
+          ended: video.ended.toString(),
+          fullscreen: (!!document.fullscreenElement).toString()
+        }
+      });
+    }
   });
 } else {
   log("LOG THE SCRIPT IN A VIDEO PAGE");

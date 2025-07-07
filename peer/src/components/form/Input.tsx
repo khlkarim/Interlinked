@@ -4,7 +4,7 @@ interface InputProps
 {
     type: string;
     name: string;
-    value: string;
+    value: string | null;
     readOnly: boolean;
     placeholder: string;
     inputCallback: (uuid: string) => void;
@@ -21,7 +21,7 @@ function Input({ type, name, value, readOnly, placeholder, inputCallback }: Inpu
             className="box"
             type={type} 
             name={name} 
-            value={value}
+            value={value ?? ""}
             placeholder={placeholder}
             onChange={handleChange}
             readOnly={readOnly}

@@ -6,26 +6,29 @@ import { useEffect, useState } from "react";
 import { log } from "../utils/logger";
 import type { Plugin } from "../interfaces/Plugin";
 import usePM from "../hooks/usePM";
-import type { Message } from "../interfaces/Message";
 
 function Stream() {
     const pluginManager = usePM();
 
-    const [uuid, setUUID] = useState('');
+    const [uuid, setUUID] = useState<string | null>(null);
     const [plugin, setPlugin] = useState<Plugin | null>(null);
 
     useEffect(() => {
-        const handleMessage = (message: Message) => {
-            if(message.type === 'STREAMER_UUID') {
-                setUUID(message.data.uuid);
-            }
-        }
+        if(plugin || !pluginManager) return;
 
-        chrome.runtime.onMessage.addListener(handleMessage);
-        return () => {
-            chrome.runtime.onMessage.removeListener(handleMessage);
-        }
-    }, []);
+        pluginManager.activeTabId()
+            .then((tabId) => {
+                if(tabId) {
+                    pluginManager.queryInjections(tabId, 'streamer')
+                        .then((injection) => {
+                            if(injection) {
+                                setUUID(injection.uuid);
+                                setPlugin(injection.plugin);
+                            }
+                        });
+                }
+            });
+    }, [pluginManager, plugin]);
 
     function handleStream() {
         if(!pluginManager) {
@@ -37,24 +40,31 @@ function Stream() {
             return;
         }
 
-        pluginManager.injectStreamerByUrl(plugin.targetUrl, plugin.streamerPath);
+        pluginManager.activeTabId(plugin.targetUrl)
+            .then((tabId) => {
+                if(tabId) {
+                    pluginManager.inject(tabId, 'streamer', plugin, undefined, (uuid) => {
+                        setUUID(uuid)
+                    });
+                }
+            });
     }
 
     function handlePlugin(plugin: Plugin | null) {
         setPlugin(plugin);
+        if (!pluginManager || !plugin) return;
 
-        if (!pluginManager) return;
-
-        pluginManager.getCurrentPage().then((page) => {
-            const streamer = page as { script: string; uuid: string };
-            if (
-                streamer &&
-                streamer.uuid &&
-                streamer.script === plugin?.streamerPath
-            ) {
-                setUUID(streamer.uuid);
-            }
-        });
+        pluginManager.activeTabId()
+            .then((tabId) => {
+                if(tabId) {
+                    pluginManager.queryInjections(tabId, 'streamer', plugin)
+                        .then((injection) => {
+                            if(injection) {
+                                setUUID(injection.uuid);
+                            }
+                        });
+                }
+            });
     }
 
     return (

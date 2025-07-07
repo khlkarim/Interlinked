@@ -157,6 +157,28 @@ export class PeerConnection {
         const channel = event.target as RTCDataChannel | null;
         if (channel && channel.readyState) {
             log('Channel status:', channel.readyState);
+
+            if(channel.readyState === 'closed') {
+                this.listeners.forEach((listener) => {
+                    if(listener.event === 'CHANNEL_CLOSED') {
+                        listener.callback({
+                            type: 'CHANNEL_CLOSED',
+                            data: {}
+                        });
+                    }
+                });
+            }
+
+            if(channel.readyState === 'open') {
+                this.listeners.forEach((listener) => {
+                    if(listener.event === 'CHANNEL_OPENED') {
+                        listener.callback({
+                            type: 'CHANNEL_OPENED',
+                            data: {}
+                        });
+                    }
+                });
+            }
         }
     }
 
