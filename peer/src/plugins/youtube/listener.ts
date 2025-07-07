@@ -80,6 +80,7 @@ function setHandlers() {
                     }
                     break;
                 case 'SYNC':
+                    log('asked to sync on', video);
                     if (time !== undefined && Math.abs(video.currentTime - Number(time)) > 0.5) {
                         video.currentTime = Number(time);
                     }

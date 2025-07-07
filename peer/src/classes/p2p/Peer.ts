@@ -33,11 +33,7 @@ export class Peer {
     }
 
     on(event: string, callback: (message: Message) => void) {
-        if(event === 'REGISTERED') {
-            this.listeners.push({ event, callback });
-            return;
-        }
-        if(event === 'NEW_CHILD') {
+        if(event === 'REGISTERED' || event === 'NEW_CHILD') {
             this.listeners.push({ event, callback });
             return;
         }
@@ -78,35 +74,35 @@ export class Peer {
     }
 
     private handleOffer(msg: SDPMessage): void {
-        if(!this.uuid) {
+        if (!this.uuid) {
             throw new Error('Peer is not registered');
         }
         log('Offer received for streaming:', msg);
-        
+
         const pc = new PeerConnection(this.uuid, msg.source);
         pc.handleOffer(msg);
-        
         this.children.push(pc);
-        log('Child PeerConnection added. Total children:', this.children.length);
+        log(`Child PeerConnection added. Total children: ${this.children.length}`);
 
-        pc.on('CHANNEL_CLOSED', () => {
-            const index = this.children.indexOf(pc);
-            if (index !== -1) {
-                this.children.splice(index, 1);
-                log('Child PeerConnection removed. Total children:', this.children.length);
+        const removeChild = () => {
+            const idx = this.children.indexOf(pc);
+            if (idx !== -1) {
+                this.children.splice(idx, 1);
+                log(`Child PeerConnection removed. Total children: ${this.children.length}`);
             }
-        });
+        };
+
+        pc.on('CHANNEL_CLOSED', removeChild);
+
         pc.on('CHANNEL_OPENED', () => {
-            this.listeners.forEach((listener) => {
-                if(listener.event === 'NEW_CHILD') {
+            this.listeners
+                .filter(listener => listener.event === 'NEW_CHILD')
+                .forEach(listener => {
                     listener.callback({
                         type: 'NEW_CHILD',
-                        data: {
-                            uuid: pc.destination
-                        }
-                    })
-                }
-            });
+                        data: { uuid: pc.destination }
+                    });
+                });
         });
     }
 

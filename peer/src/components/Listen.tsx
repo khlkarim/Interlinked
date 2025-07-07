@@ -6,12 +6,19 @@ import { useEffect, useState } from "react";
 import { log } from "../utils/logger";
 import type { Plugin } from "../interfaces/Plugin";
 import usePM from "../hooks/usePM";
+import type { Action } from "../App";
 
-function Listen() {
+interface ListenProps {
+    action: Action;
+    handleAction: (action: Action) => void;
+}
+
+function Listen({ action, handleAction }: ListenProps) {
     const pluginManager = usePM();
 
     const [uuid, setUUID] = useState<string | null>(null);
     const [plugin, setPlugin] = useState<Plugin | null>(null);
+    const [listening, setListening] = useState<boolean>(false);
 
     useEffect(() => {
         if(plugin || !pluginManager) return;
@@ -24,11 +31,13 @@ function Listen() {
                             if(injection) {
                                 setUUID(injection.uuid);
                                 setPlugin(injection.plugin);
+                                handleAction('listening');
+                                setListening(true);
                             }
                         });
                 }
             });
-    }, [pluginManager, plugin]);
+    }, [pluginManager, plugin, handleAction]);
    
 
     function handleListen() {
@@ -48,7 +57,10 @@ function Listen() {
         pluginManager.activeTabId(plugin.targetUrl)
             .then((tabId) => {
                 if(tabId) {
-                    pluginManager.inject(tabId, 'listener', plugin, uuid);
+                    pluginManager.inject(tabId, 'listener', plugin, uuid, () => {
+                        handleAction('listening');
+                        setListening(true);
+                    });
                 }
             });
     }
@@ -57,21 +69,47 @@ function Listen() {
         setPlugin(plugin);
         if (!pluginManager || !plugin) return;
 
+        handleListening();
+    }
+
+    function handleInput(uuid: string) {
+        setUUID(uuid);
+    }
+
+    function handleStop() {
+        if(!pluginManager) {
+            log('Inaccessible plugin manager');
+            return;
+        }
+
         pluginManager.activeTabId()
             .then((tabId) => {
                 if(tabId) {
-                    pluginManager.queryInjections(tabId, 'listener', plugin)
-                        .then((injection) => {
-                            if(injection) {
-                                setUUID(injection.uuid);
-                            }
+                    pluginManager.kill(tabId)
+                        .then(() => {
+                            setUUID(null);
+                            handleAction(null);
+                            setListening(false);
                         });
                 }
             });
     }
 
-    function handleInput(uuid: string) {
-        setUUID(uuid);
+    async function handleListening() {
+        if(!pluginManager || !plugin) {
+            setListening(false);
+            return;
+        }
+
+        const tabId = await pluginManager.activeTabId(plugin.targetUrl);
+        const injection = await pluginManager.queryInjections(tabId, 'listener', plugin);
+
+        if(injection) {
+            setUUID(injection.uuid);
+            setListening(true);
+        } else {
+            setListening(false);
+        }
     }
 
     return (
@@ -93,7 +131,11 @@ function Listen() {
                     plugins={PLUGINS_LIST} 
                     changeCallback={handlePlugin} 
                 />
-                <Button name="Listen" handleClick={handleListen} />
+                {
+                    listening ?
+                    <Button name="Stop" disabled={false} handleClick={handleStop} />
+                    : <Button name="Listen" disabled={action !== null} handleClick={handleListen} />
+                }
             </div>
 
         </div>

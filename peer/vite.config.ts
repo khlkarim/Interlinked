@@ -10,8 +10,8 @@ export default defineConfig({
   //   emptyOutDir: false, // Don't clear previous files, just override when necessary
   //   rollupOptions: {
   //     input: {
-  //       streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
-  //       // listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
+  //       // streamer: resolve(__dirname, 'src/plugins/youtube/streamer.ts'),
+  //       listener: resolve(__dirname, 'src/plugins/youtube/listener.ts'),
   //       // reloader: resolve(__dirname, 'src/workers/reloader.ts'),
   //     },
   //     output: {

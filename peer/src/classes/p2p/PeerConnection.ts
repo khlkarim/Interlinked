@@ -113,10 +113,6 @@ export class PeerConnection {
     }
 
     public createDataChannel(label = 'channel', options?: RTCDataChannelInit): void {
-        if (this.channel) {
-            log('Data channel already exists, skipping creation.');
-            return;
-        }
         try {
             this.channel = this.pc.createDataChannel(label, options);
             this.setupDataChannel();

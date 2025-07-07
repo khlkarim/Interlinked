@@ -6,12 +6,19 @@ import { useEffect, useState } from "react";
 import { log } from "../utils/logger";
 import type { Plugin } from "../interfaces/Plugin";
 import usePM from "../hooks/usePM";
+import type { Action } from "../App";
 
-function Stream() {
+interface StreamProps {
+    action: Action;
+    handleAction: (action: Action) => void;
+}
+
+function Stream({ action, handleAction }: StreamProps) {
     const pluginManager = usePM();
 
     const [uuid, setUUID] = useState<string | null>(null);
     const [plugin, setPlugin] = useState<Plugin | null>(null);
+    const [streaming, setStreaming] = useState<boolean>(false);
 
     useEffect(() => {
         if(plugin || !pluginManager) return;
@@ -24,11 +31,13 @@ function Stream() {
                             if(injection) {
                                 setUUID(injection.uuid);
                                 setPlugin(injection.plugin);
+                                handleAction('streaming');
+                                setStreaming(true);
                             }
                         });
                 }
             });
-    }, [pluginManager, plugin]);
+    }, [pluginManager, plugin, handleAction]);
 
     function handleStream() {
         if(!pluginManager) {
@@ -44,7 +53,9 @@ function Stream() {
             .then((tabId) => {
                 if(tabId) {
                     pluginManager.inject(tabId, 'streamer', plugin, undefined, (uuid) => {
-                        setUUID(uuid)
+                        setUUID(uuid);
+                        handleAction('streaming');
+                        setStreaming(true);
                     });
                 }
             });
@@ -52,19 +63,52 @@ function Stream() {
 
     function handlePlugin(plugin: Plugin | null) {
         setPlugin(plugin);
-        if (!pluginManager || !plugin) return;
+        if(!plugin) {
+            setUUID(null);
+            return;
+        }
+        if (!pluginManager) {
+            log('Inaccessible plugin manager');
+            return;
+        }
+        
+        handleStreaming();
+    }
+
+    function handleStop() {
+        if(!pluginManager) {
+            log('Inaccessible plugin manager');
+            return;
+        }
 
         pluginManager.activeTabId()
             .then((tabId) => {
                 if(tabId) {
-                    pluginManager.queryInjections(tabId, 'streamer', plugin)
-                        .then((injection) => {
-                            if(injection) {
-                                setUUID(injection.uuid);
-                            }
+                    pluginManager.kill(tabId)
+                        .then(() => {
+                            setUUID(null);
+                            handleAction(null);
+                            setStreaming(false);
                         });
                 }
             });
+    }
+
+    async function handleStreaming() {
+        if(!pluginManager || !plugin) {
+            setStreaming(false);
+            return;
+        }
+
+        const tabId = await pluginManager.activeTabId(plugin.targetUrl);
+        const injection = await pluginManager.queryInjections(tabId, 'streamer', plugin);
+
+        if(injection) {
+            setUUID(injection.uuid);
+            setStreaming(true);
+        } else {
+            setStreaming(false);
+        }
     }
 
     return (
@@ -86,7 +130,12 @@ function Stream() {
                     plugins={PLUGINS_LIST} 
                     changeCallback={handlePlugin} 
                 />
-                <Button name="Stream" handleClick={handleStream} />
+
+                {
+                    streaming ?
+                    <Button name="Stop" disabled={false} handleClick={handleStop} />
+                    : <Button name="Stream" disabled={action != null} handleClick={handleStream} />
+                }
             </div>
         </div>
     );

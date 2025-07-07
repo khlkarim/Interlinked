@@ -40,7 +40,6 @@ class PluginManager {
     if (injection && injection.type === type && (!plugin || injection.plugin.name === plugin.name)) {
       return injection;
     }
-    return void 0;
   }
   async inject(tabId, type, plugin, uuid, onInjected) {
     await this.ready;

@@ -51,7 +51,7 @@ export class PluginManager {
         tabId: number, 
         type: 'streamer' | 'listener', 
         plugin?: Plugin
-    ) {
+    ): Promise<Injection | undefined> {
         await this.ready;
         const injection = this.injections.get(tabId);
 
@@ -62,7 +62,6 @@ export class PluginManager {
         ) {
             return injection;
         }
-        return undefined;
     }
 
     async inject(
@@ -107,6 +106,7 @@ export class PluginManager {
                     this.injections.set(tabId, { uuid, type, plugin });
                     this.persistInjections();
                     log(this.injections);
+                    if(onInjected) onInjected(uuid);
                 });
             }
         });

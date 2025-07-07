@@ -37,6 +37,9 @@ let video = document.querySelector<HTMLVideoElement>('video');
 
 window.addEventListener('yt-navigate-finish', () => {
     video = document.querySelector<HTMLVideoElement>('video');
+    if(video) {
+        video.pause();
+    }
 
     peer.broadcast({
         type: 'GOTO',

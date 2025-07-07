@@ -3421,10 +3421,6 @@ class PeerConnection {
     log("Signaling state changed:", this.pc.signalingState);
   }
   createDataChannel(label = "channel", options) {
-    if (this.channel) {
-      log("Data channel already exists, skipping creation.");
-      return;
-    }
     try {
       this.channel = this.pc.createDataChannel(label, options);
       this.setupDataChannel();
@@ -3522,11 +3518,7 @@ class Peer {
     });
   }
   on(event, callback) {
-    if (event === "REGISTERED") {
-      this.listeners.push({ event, callback });
-      return;
-    }
-    if (event === "NEW_CHILD") {
+    if (event === "REGISTERED" || event === "NEW_CHILD") {
       this.listeners.push({ event, callback });
       return;
     }
@@ -3567,24 +3559,21 @@ class Peer {
     const pc = new PeerConnection(this.uuid, msg.source);
     pc.handleOffer(msg);
     this.children.push(pc);
-    log("Child PeerConnection added. Total children:", this.children.length);
-    pc.on("CHANNEL_CLOSED", () => {
-      const index = this.children.indexOf(pc);
-      if (index !== -1) {
-        this.children.splice(index, 1);
-        log("Child PeerConnection removed. Total children:", this.children.length);
+    log(`Child PeerConnection added. Total children: ${this.children.length}`);
+    const removeChild = () => {
+      const idx = this.children.indexOf(pc);
+      if (idx !== -1) {
+        this.children.splice(idx, 1);
+        log(`Child PeerConnection removed. Total children: ${this.children.length}`);
       }
-    });
+    };
+    pc.on("CHANNEL_CLOSED", removeChild);
     pc.on("CHANNEL_OPENED", () => {
-      this.listeners.forEach((listener) => {
-        if (listener.event === "NEW_CHILD") {
-          listener.callback({
-            type: "NEW_CHILD",
-            data: {
-              uuid: pc.destination
-            }
-          });
-        }
+      this.listeners.filter((listener) => listener.event === "NEW_CHILD").forEach((listener) => {
+        listener.callback({
+          type: "NEW_CHILD",
+          data: { uuid: pc.destination }
+        });
       });
     });
   }
@@ -3636,6 +3625,9 @@ document.addEventListener("keydown", (event) => {
 let video = document.querySelector("video");
 window.addEventListener("yt-navigate-finish", () => {
   video = document.querySelector("video");
+  if (video) {
+    video.pause();
+  }
   peer.broadcast({
     type: "GOTO",
     data: {
